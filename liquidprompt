@@ -329,6 +329,7 @@ _lp_source_config()
     LP_MARK_HG="${LP_MARK_HG:-"☿"}"
     LP_MARK_SVN="${LP_MARK_SVN:-"‡"}"
     LP_MARK_GIT="${LP_MARK_GIT:-"±"}"
+    LP_MARK_REFSEP="${LP_MARK_REFSEP:-":"}"
     LP_MARK_VCSH="${LP_MARK_VCSH:-"|"}"
     LP_MARK_FOSSIL="${LP_MARK_FOSSIL:-"⌘"}"
     LP_MARK_BZR="${LP_MARK_BZR:-"⚯"}"
@@ -349,6 +350,7 @@ _lp_source_config()
     LP_COLOR_JOB_Z=${LP_COLOR_JOB_Z:-$BOLD_YELLOW}
     LP_COLOR_ERR=${LP_COLOR_ERR:-$PURPLE}
     LP_COLOR_MARK=${LP_COLOR_MARK:-$BOLD}
+    LP_COLOR_MARK_REFSEP=${LP_COLOR_MARK_REFSEP:-$BOLD_BLUE}
     LP_COLOR_MARK_ROOT=${LP_COLOR_MARK_ROOT:-$BOLD_RED}
     LP_COLOR_MARK_SUDO=${LP_COLOR_MARK_SUDO:-$LP_COLOR_MARK_ROOT}
     LP_COLOR_USER_LOGGED=${LP_COLOR_USER_LOGGED:-""}
@@ -890,13 +892,14 @@ _lp_git_branch_color()
         local has_commit=""
         local commit_ahead
         local commit_behind
+        local remote_branch
+        local remote_ref
         if [[ -n "$remote" ]]; then
-            local remote_branch
             remote_branch="$(\git config --get branch.${branch}.merge)"
             if [[ -n "$remote_branch" ]]; then
-                remote_branch=${remote_branch/refs\/heads/refs\/remotes\/$remote}
-                commit_ahead="$(\git rev-list --count $remote_branch..HEAD 2>/dev/null)"
-                commit_behind="$(\git rev-list --count HEAD..$remote_branch 2>/dev/null)"
+                remote_ref=${remote_branch/refs\/heads/refs\/remotes\/$remote}
+                commit_ahead="$(\git rev-list --count $remote_ref..HEAD 2>/dev/null)"
+                commit_behind="$(\git rev-list --count HEAD..$remote_ref 2>/dev/null)"
                 if [[ "$commit_ahead" -ne "0" && "$commit_behind" -ne "0" ]]; then
                     has_commit="${LP_COLOR_COMMITS}+$commit_ahead${NO_COL}/${LP_COLOR_COMMITS_BEHIND}-$commit_behind${NO_COL}"
                 elif [[ "$commit_ahead" -ne "0" ]]; then
@@ -904,12 +907,19 @@ _lp_git_branch_color()
                 elif [[ "$commit_behind" -ne "0" ]]; then
                     has_commit="${LP_COLOR_COMMITS_BEHIND}-$commit_behind${NO_COL}"
                 fi
+                remote_ref=${remote_ref/refs\/remotes\//}
+                remote_branch=${remote_branch/refs\/heads\//}
             fi
         fi
 
         local ret
         local shortstat # only to check for uncommitted changes
         shortstat="$(LC_ALL=C \git diff --shortstat HEAD -- 2>/dev/null)"
+
+        if [[ $remote_branch != $branch ]]; then
+            # FIXME vvvv no NO_COL between refsep and remaining to get the color we want
+            branch="${branch}${NO_COL}${LP_COLOR_MARK_REFSEP}${LP_MARK_REFSEP}${LP_COLOR_CHANGES}${remote_ref}${NO_COL}"
+        fi
 
         if [[ -n "$shortstat" ]]; then
             local u_stat # shorstat of *unstaged* changes
