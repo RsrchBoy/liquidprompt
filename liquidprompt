@@ -924,7 +924,7 @@ _lp_git_branch_color()
                 elif [[ "$commit_behind" -ne "0" ]]; then
                     has_commit="${LP_COLOR_COMMITS_BEHIND}-$commit_behind${NO_COL}"
                 fi
-                remote_ref=${remote_ref/refs\/remotes\//}
+                remote_ref=${remote_ref/refs\/remotes\/$remote\//}
                 remote_branch=${remote_branch/refs\/heads\//}
             fi
         fi
