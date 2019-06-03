@@ -55,7 +55,7 @@ Here is an overview of what Liquid Prompt is capable of displaying:
   a red one if not
 * the current directory in bold, shortened if it takes too much space while always
   preserving the first two directory names
-* the current Python virtual environment
+* the current Python (or Conda) virtual environment
 * an up arrow if an HTTP proxy is in use
 * the name of the current branch if you are in a version control repository
   (Git, Mercurial, Subversion, Bazaar, or Fossil):
@@ -83,6 +83,10 @@ You can temporarily deactivate Liquid Prompt and revert to your previous prompt
 by typing `prompt_off`. Use `prompt_on` to bring it back. You can disable
 *all* prompts and simply use a single mark sign (`$ ` for user and `# ` for root)
 by using the `prompt_OFF` command.
+
+Liquidprompt's appearance is fully customizable and comes with various themes,
+for example one inspired by the famous "powerline":
+![Powernerd Theme](https://raw.github.com/nojhan/liquidprompt/master/theme.png)
 
 
 ## Test Drive and Installation
@@ -114,7 +118,9 @@ You can even theme Liquid Prompt and use a custom PS1 prompt. This is explained
 in the sections below.
 
 Check in your `.bashrc` that the `PROMPT_COMMAND` variable is not set, or else
-the prompt will not be available.
+the prompt will not be available. If you must set it or use a add-on that sets
+it, make sure to set `PROMPT_COMMAND` before you source Liquid Prompt to avoid
+history and timing issues. Do not export `PROMPT_COMMAND`.
 
 ### Installation via Antigen
 
@@ -145,12 +151,13 @@ You can configure some variables in the `~/.config/liquidpromptrc` file:
 
 * `LP_BATTERY_THRESHOLD`, the maximal value under which the battery level is displayed
 * `LP_LOAD_THRESHOLD`, the minimal value after which the load average is displayed
+* `LP_LOAD_SCALE_MAX`, the load that is considered the maximum when choosing colors
 * `LP_TEMP_THRESHOLD`, the minimal value after which the average temperature is displayed
 * `LP_RUNTIME_THRESHOLD`, the minimal value after which the runtime is displayed
 * `LP_PATH_LENGTH`, the maximum percentage of the screen width used to display the path
 * `LP_PATH_KEEP`, how many directories to keep at the beginning of a shortened path
-* `LP_HOSTNAME_ALWAYS`, a choice between always displaying the hostname or
-  showing it only when connected via a remote shell
+* `LP_HOSTNAME_ALWAYS`, a choice between always displaying the hostname (1) or
+  showing it only when connected via a remote shell (0) or never showing it (-1).
 * `LP_USER_ALWAYS`, a choice between always displaying the user or showing
   it only when he is different from the one that logged in
 
@@ -176,6 +183,7 @@ prompt-building process:
 * `LP_ENABLE_SUDO`, if you want the prompt mark to change color while you have password-less root access
 * `LP_ENABLE_FQDN`, if you want the display of the fully qualified domain name
 * `LP_ENABLE_TIME`, if you want to display the time at which the prompt was shown
+* `LP_ENABLE_ERR`, if you want to display the error code of the last command (if any)
 * `LP_TIME_ANALOG`, if you want to show the time using an analog clock instead of numeric values
 
 Note that if required commands are not installed, enabling the corresponding
@@ -227,7 +235,12 @@ your `~/.liquidpromptrc` and you're done.
 Those scripts basically export the `LP_PS1` variable, by appending features and
 theme colors.
 
+Note that within `*.ps1` files, you can (only) access colors definition by using the
+`LP_COLOR` associative array (cf. the "background color" section below).
+
 Available features:
+* `LP_PS1_PREFIX` and `LP_PS1_PREFIX` the tag that pre/postfix the prompt (see the previous section)
+* `LP_TIME` current time
 * `LP_BATT` battery
 * `LP_LOAD` load
 * `LP_TEMP` temperature
@@ -239,10 +252,12 @@ Available features:
 * `LP_PROXY` HTTP proxy
 * `LP_VCS` informations concerning the current working repository
 * `LP_ERR` last error code
-* `LP_MARK` prompt mark
+* `LP_MARK` smart prompt mark
 * `LP_TITLE` the prompt as a window's title escaped sequences
-*  LP_TTYN  the terminal basename
+* `LP_TTYN` the terminal basename
+* `LP_VENV` the current virtual environment (Python or Conda)
 * `LP_BRACKET_OPEN` and `LP_BRACKET_CLOSE`, brackets enclosing the user+path part
+* `LP_RUNTIME` running time of the last command
 
 For example, if you just want to have a prompt displaying the user and the
 host, with a normal full path in blue and Git support only:
@@ -260,16 +275,57 @@ To erase your new formatting, just bind `LP_PS1` to a null string:
 ## Themes
 
 You can change the colors and special characters of some parts of Liquid Prompt
-by sourcing your favorite theme file (`*.theme`) in the configuration file. See
-[`liquid.theme`](liquid.theme) for an example of the default Liquid Prompt theme.
+by sourcing your favorite theme file (`*.theme`) in the configuration file.
+See [`liquid.theme`](liquid.theme).
+
+For an an advanced example of a complete theme, see the "powernerd"
+theme files, inspired by powerline (i.e. with background colors and chevrons):
+[`powernerd.theme`](powernerd.theme) and [`powernerd.ps1`](powernerd.ps1)
+(note: this require that your terminal use one of the
+["nerd-fonts"](https://github.com/ryanoasis/nerd-fonts)).
+
 
 ### Colors
+
+#### Simple colors
 
 The available colours available for use are:
 
 `BOLD`, `BLACK`, `BOLD_GRAY`, `WHITE`, `BOLD_WHITE`, `GREEN`, `BOLD_GREEN`,
-`YELLOW`, `BOLD_YELLOW`, `BLUE`, `BOLD_BLUE`, `PINK`, `CYAN`, `BOLD_CYAN,`,
-`RED`, `BOLD_RED`, `WARN_RED`, `CRIT_RED`, `DANGER_RED`, and `NO_COL`.
+`YELLOW`, `BOLD_YELLOW`, `BLUE`, `BOLD_BLUE`, `PURPLE` (or `MAGENTA`),
+`PINK` (or `BOLD_PURPLE`, or `BOLD_MAGENTA`), `CYAN`, `BOLD_CYAN,`,
+`RED`, `BOLD_RED`
+
+You can directly use them in your configuration files to change some
+foreground color in your own prompt, for example, to set the path segment
+as a bold and blue over the default background of your terminal:
+`LP_COLOR_PATH="${BOLD_BLUE]}"`.
+
+#### Colors with semantic
+
+To ease the creation of colormaps indicating warnings, you can use:
+`WARN_RED`, `CRIT_RED`, `DANGER_RED`.
+
+#### Background colors
+
+Additionally, you can have access to simple colors as background colors, using the
+`LP_COLOR` associative array, in which keys have the form `FOREGROUND_ON_BACKGROUND`,
+for example, for bold and white over a blue background:
+`${LP_COLOR[BOLD_WHITE_ON_BLUE]}`.
+The special foreground color `NONE` indicate that only the background is set,
+for example, for the default color of your terminal
+over a blue background: `${LP_COLOR[NONE_ON_BLUE]}`.
+For your convenience, foreground colors withtout background are also keys,
+for example: `"${LP_COLOR[BOLD_GREEN]}"`.
+
+The special variable `NO_COL` can be used to reset all color formatting
+after its use, for instance, to suppress a prior background:
+`${LP_COLOR[WHITE_ON_BLUE]}§${NO_COL}${GREEN}>`.
+
+Note: `LP_COLOR` is the only color variable available from `*.ps1` files.
+
+
+#### Colored parts
 
 Set the variable to a null string (`""`) if you do not want color.
 
@@ -283,6 +339,7 @@ Set the variable to a null string (`""`) if you do not want color.
     * `LP_COLOR_JOB_R` Running (`xterm &`)
     * `LP_COLOR_JOB_Z` Sleeping (Ctrl-Z)
     * `LP_COLOR_IN_MULTIPLEXER` currently running in a terminal multiplexer
+    * `LP_COLOR_IN_LOCAL` currently running in a local terminal
 * Last error code
     * `LP_COLOR_ERR`
 * Prompt mark
@@ -321,6 +378,7 @@ Set the variable to a null string (`""`) if you do not want color.
   (leave empty to use your shell's default mark)
 * `LP_MARK_BATTERY` (default: "⌁") in front of the battery charge
 * `LP_MARK_ADAPTER` (default: "⏚") displayed when plugged-in
+* `LP_MARK_TEMP` (default: "θ") in front of the temperature
 * `LP_MARK_LOAD` (default: "⌂") in front of the load
 * `LP_MARK_PROXY` (default: "↥") indicate a proxy in use
 * `LP_MARK_HG` (default: "☿") prompt mark in Mercurial repositories
@@ -332,10 +390,11 @@ Set the variable to a null string (`""`) if you do not want color.
   (see `LP_DISABLED_VCS_PATH`)
 * `LP_MARK_UNTRACKED` (default: "\*") if Git has untracked files
 * `LP_MARK_STASH` (default: "+") if Git has stashed modifications
-* `LP_MARK_BRACKET_OPEN` (default: "[") marks around the main part of the prompt
-* `LP_MARK_BRACKET_CLOSE` (default: "]") marks around the main part of the prompt
+* `LP_MARK_BRACKET_OPEN` and `LP_MARK_BRACKET_CLOSE` (default: "[" and "]") marks around the main part of the prompt
 * `LP_MARK_PERM` (default: ":") colored green red or green to indicate write
-  permissions of the current directory
+* `LP_MARK_SPACE` (default: " ") spacing mark used as a separator between segments
+* `LP_MARK_VCS_OPEN` and `LP_MARK_VCS_CLOSE` (default: "(" and ")") marks around VCS additional informations
+* `LP_MARK_X11` (default: "@") mark before the hostname, colored if you're connected through an X window
 * `LP_TITLE_OPEN` (default: "\e]0;") escape character opening a window's title
 * `LP_TITLE_CLOSE` (default: "\a") escape character closing a window's title
 
@@ -357,6 +416,12 @@ version 3](LICENSE).
   sufficiently complete font on your system. The [Symbola](http://users.teilar.gr/~g1951d/)
   font, designed by Georges Douros, is known to work well. On Debian or Ubuntu
   install try the `fonts-symbola` or `ttf-ancient-fonts` package.
+* The "sudo" feature is disabled by default as there is no way to detect
+  if the user has sudo rights without triggering a security alert
+  that will annoy the sysadmin.
+* When creating a new VCS repository, the related information will not appear
+  until a directory update: either by reloading the prompt (e.g. `source ~/.bashrc`)
+  or by changing the current directory out and back (e.g. `cd .. ; cd -`).
 
 
 ## Authors

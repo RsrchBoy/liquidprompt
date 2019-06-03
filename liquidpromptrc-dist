@@ -73,8 +73,8 @@ LP_ENABLE_PERM=1
 LP_ENABLE_PROXY=1
 
 # Enable the jobs feature.
-# Recommended value is 1
-LP_ENABLE_JOBS=1
+# Recommended value is 0 (may be slow on some systems)
+LP_ENABLE_JOBS=0
 
 # Enable the load feature.
 # Recommended value is 1
@@ -129,6 +129,14 @@ LP_RUNTIME_THRESHOLD=2
 # Display the virtualenv that is currently activated, if any
 # Recommended value is 1
 LP_ENABLE_VIRTUALENV=1
+
+# Display the ruby virtual env that is currently activated, if any
+# Recommended value is 1
+LP_ENABLE_RUBY_VENV=1
+
+# If using RVM, personalize the rvm-prompt
+# see http://rvm.io/workflow/prompt for details.
+LP_RUBY_RVM_PROMPT_OPTIONS='i v g s'
 
 # Display the enabled software collections, if any
 # Recommended value is 1
